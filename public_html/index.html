@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Device Linking</title>
+    <style>
+        #qr-code {
+            width: 300px;
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Link Your WhatsApp Device</h1>
+    <input type="text" id="user_id">
+    <button id="loginButton">Login</button>
+    <button id="refreshQRButton">Refresh QR</button>
+    <div id="notification"></div>
+    <div id="qr-container">
+        <img id="qr-code" src="" alt="QR Code will be displayed here">
+    </div>
+
+    <script>
+        
+        document.getElementById('loginButton').addEventListener('click', generateQRCode);
+        document.getElementById('refreshQRButton').addEventListener('click', generateQRCode);
+        
+        function generateQRCode() {
+            const userId = document.getElementById('user_id').value; // Replace with unique identifier for each user
+            fetch('http://localhost:3000/generate-qr', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId: userId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    if (data.qrCode) {
+                        document.getElementById('qr-code').src = data.qrCode;
+                        showNotification('QR code generated. Please scan it with your WhatsApp app.');
+                    } else {
+                        showNotification('Device linked successfully.');
+                    }
+                } else {
+                    showNotification('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                showNotification('Error: ' + error.message);
+            });
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+        }
+    </script>
+</body>
+</html>

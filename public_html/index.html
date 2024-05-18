@@ -1,62 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Device Linking</title>
-    <style>
-        #qr-code {
-            width: 300px;
-            height: 300px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Web Client</title>
 </head>
 <body>
-    <h1>Link Your WhatsApp Device</h1>
-    <input type="text" id="user_id">
-    <button id="loginButton">Login</button>
-    <button id="refreshQRButton">Refresh QR</button>
-    <div id="notification"></div>
-    <div id="qr-container">
-        <img id="qr-code" src="" alt="QR Code will be displayed here">
-    </div>
+  <h1>WhatsApp Web Client</h1>
 
-    <script>
-        
-        document.getElementById('loginButton').addEventListener('click', generateQRCode);
-        document.getElementById('refreshQRButton').addEventListener('click', generateQRCode);
-        
-        function generateQRCode() {
-            const userId = document.getElementById('user_id').value; // Replace with unique identifier for each user
-            fetch('http://localhost:3000/generate-qr', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ userId: userId })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    if (data.qrCode) {
-                        document.getElementById('qr-code').src = data.qrCode;
-                        showNotification('QR code generated. Please scan it with your WhatsApp app.');
-                    } else {
-                        showNotification('Device linked successfully.');
-                    }
-                } else {
-                    showNotification('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                showNotification('Error: ' + error.message);
-            });
+  <div id="qrCode"></div>
+
+  <div id="notifications"></div>
+
+  <form id="sendMessageForm">
+    <label for="number">Destination Number:</label>
+    <input type="text" id="number" name="number" required><br>
+    <label for="message">Message:</label>
+    <input type="text" id="message" name="message" required><br>
+    <button type="submit">Send</button>
+  </form>
+
+  <script>
+    const ws = new WebSocket('ws://localhost:8080');
+
+    ws.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      if (data.type === 'qr') {
+        displayQRCode(data.data);
+      } else if (data.type === 'status' || data.type === 'error') {
+        displayNotification(data.message);
+      }
+    };
+
+    function displayQRCode(qrData) {
+        const qrCodeElement = document.getElementById('qrCode');
+        qrCodeElement.innerHTML = `<img src="${qrData}" alt="QR Code">`;
+    }
+
+    function displayNotification(message) {
+      const notificationsElement = document.getElementById('notifications');
+      const notification = document.createElement('div');
+      notification.textContent = message;
+      notificationsElement.appendChild(notification);
+    }
+
+    document.getElementById('sendMessageForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const number = document.getElementById('number').value;
+        const message = document.getElementById('message').value;
+
+        // Validation: Check if number and message are not empty
+        if (!number.trim() || !message.trim()) {
+            displayNotification('Number and message cannot be empty');
+            return;
         }
 
-        function showNotification(message) {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-        }
-    </script>
+        sendMessage(number, message);
+    });
+
+    function sendMessage(number, message) {
+        const payload = { type: 'send_message', data: { number, message } };
+        ws.send(JSON.stringify(payload));
+    }
+  </script>
 </body>
 </html>

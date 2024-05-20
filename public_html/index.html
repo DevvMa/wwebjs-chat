@@ -4,20 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WhatsApp Web Client</title>
+  <!-- Include Tailwind CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-  <h1>WhatsApp Web Client</h1>
+<body class="bg-gray-100 min-h-screen flex flex-col justify-center items-center">
 
-  <div id="qrCode"></div>
+  <h1 class="text-3xl font-bold mb-6">WhatsApp Web Client</h1>
 
-  <div id="notifications"></div>
+  <div id="qrCode" class="mb-6"></div>
+  <div id="notifications" class="mb-6"></div>
 
-  <form id="sendMessageForm">
-    <label for="number">Destination Number:</label>
-    <input type="text" id="number" name="number" required><br>
-    <label for="message">Message:</label>
-    <input type="text" id="message" name="message" required><br>
-    <button type="submit">Send</button>
+  <form id="linkWhatsAppForm" class="flex flex-col items-center">
+    <label for="phoneNumber" class="mb-2">Phone Number:</label>
+    <input type="text" id="phoneNumber" name="phoneNumber" class="border border-gray-300 rounded px-3 py-2 mb-4 w-64" required>
+    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300">Link WhatsApp Account</button>
   </form>
 
   <script>
@@ -25,42 +25,35 @@
 
     ws.onmessage = function(event) {
       const data = JSON.parse(event.data);
-      if (data.type === 'qr') {
+      if (data.type === 'qr_code') {
         displayQRCode(data.data);
-      } else if (data.type === 'status' || data.type === 'error') {
+      } else if (data.type === 'notification') {
         displayNotification(data.message);
       }
     };
 
+    document.getElementById('linkWhatsAppForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const phoneNumber = document.getElementById('phoneNumber').value;
+      linkWhatsAppAccount(phoneNumber);
+    });
+
     function displayQRCode(qrData) {
-        const qrCodeElement = document.getElementById('qrCode');
-        qrCodeElement.innerHTML = `<img src="${qrData}" alt="QR Code">`;
+      const qrCodeElement = document.getElementById('qrCode');
+      qrCodeElement.innerHTML = `<img src="${qrData}" alt="QR Code" class="max-w-full">`;
+    }
+
+    function linkWhatsAppAccount(phoneNumber) {
+      const payload = { type: 'link_whatsapp_account', phoneNumber };
+      ws.send(JSON.stringify(payload));
     }
 
     function displayNotification(message) {
       const notificationsElement = document.getElementById('notifications');
       const notification = document.createElement('div');
       notification.textContent = message;
+      notification.classList.add('bg-gray-200', 'rounded', 'px-4', 'py-2', 'mb-2');
       notificationsElement.appendChild(notification);
-    }
-
-    document.getElementById('sendMessageForm').addEventListener('submit', function(event) {
-        event.preventDefault();
-        const number = document.getElementById('number').value;
-        const message = document.getElementById('message').value;
-
-        // Validation: Check if number and message are not empty
-        if (!number.trim() || !message.trim()) {
-            displayNotification('Number and message cannot be empty');
-            return;
-        }
-
-        sendMessage(number, message);
-    });
-
-    function sendMessage(number, message) {
-        const payload = { type: 'send_message', data: { number, message } };
-        ws.send(JSON.stringify(payload));
     }
   </script>
 </body>
